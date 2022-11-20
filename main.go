@@ -28,6 +28,13 @@ func main() {
 	// migration
 	migrations.AutoMigration(db)
 
+	// seeder to create user
+	if err := db.AutoMigrate(&models.User{}); err == nil && db.Migrator().HasTable(&models.User{}) {
+		if err := db.First(&models.User{}).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+			seeders.CreateUser(db)
+		}
+	}
+
 	// seeder to create customer
 	if err := db.AutoMigrate(&models.Customer{}); err == nil && db.Migrator().HasTable(&models.Customer{}) {
 		if err := db.First(&models.Customer{}).Error; errors.Is(err, gorm.ErrRecordNotFound) {
@@ -43,6 +50,10 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	// auth handler
+	authHandler := handlers.NewAuthHandler(db)
+	authHandler.Handler(&r.RouterGroup)
 
 	// customer handler
 	customerHandler := handlers.NewCustomerHandler(db)

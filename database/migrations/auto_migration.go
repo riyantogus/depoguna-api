@@ -8,5 +8,5 @@ import (
 
 // AutoMigration is auto migrate database
 func AutoMigration(db *gorm.DB) {
-	db.AutoMigrate(&models.Customer{}, &models.Order{})
+	db.AutoMigrate(&models.User{}, &models.Customer{}, &models.Order{})
 }

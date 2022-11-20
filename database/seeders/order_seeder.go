@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// CreateCustomer is seeder to create customer
+// CreateOrder is seeder to create order
 func CreateOrder(db *gorm.DB) error {
 	var orders = []models.Order{
 		{CustomerId: 1, ProductId: 2, Qty: 20},

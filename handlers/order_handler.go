@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"depoguna-api/controllers"
+	"depoguna-api/middleware"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -25,6 +26,7 @@ func (h *orderHandler) Handler(rg *gin.RouterGroup) {
 	orderController := controllers.NewOrderController(h.DB)
 
 	order := rg.Group("/api")
+	order.Use(middleware.JWTAuth)
 	order.GET("/order", orderController.FindAll)
 	order.GET("/order/:id", orderController.GetDetail)
 	order.POST("/order", orderController.Insert)
