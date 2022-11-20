@@ -35,10 +35,22 @@ func main() {
 		}
 	}
 
+	// seeder to create order
+	if err := db.AutoMigrate(&models.Order{}); err == nil && db.Migrator().HasTable(&models.Order{}) {
+		if err := db.First(&models.Order{}).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+			seeders.CreateOrder(db)
+		}
+	}
+
 	r := gin.Default()
 
 	// customer handler
 	customerHandler := handlers.NewCustomerHandler(db)
 	customerHandler.Handler(&r.RouterGroup)
+
+	// order handler
+	orderHandler := handlers.NewOrderHandler(db)
+	orderHandler.Handler(&r.RouterGroup)
+
 	r.Run(":8080")
 }

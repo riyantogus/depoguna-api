@@ -9,14 +9,13 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 	"gorm.io/gorm"
 )
 
-type CustomerController interface {
+type OrderController interface {
 	FindAll(ctx *gin.Context)
 	GetDetail(ctx *gin.Context)
 	Insert(ctx *gin.Context)
@@ -25,23 +24,23 @@ type CustomerController interface {
 	Search(ctx *gin.Context)
 }
 
-type customerController struct {
-	Repository repositories.CustomerRepository
+type orderController struct {
+	Repository repositories.OrderRepository
 	Validation utils.ValidationUtil
 }
 
-func NewCustomerController(db *gorm.DB) CustomerController {
-	return &customerController{
-		Repository: repositories.NewCustomerRepository(db),
+func NewOrderController(db *gorm.DB) OrderController {
+	return &orderController{
+		Repository: repositories.NewOrderRepository(db),
 		Validation: utils.NewValidationUtil(),
 	}
 }
 
-func (c *customerController) FindAll(ctx *gin.Context) {
+func (c *orderController) FindAll(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.Query("page"))
 	pageSize, _ := strconv.Atoi(ctx.Query("page_size"))
 	paginate := utils.Paginate(page, pageSize)
-	customers, err := c.Repository.FindAll(paginate)
+	orders, err := c.Repository.FindAll(paginate)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse{
 			Status:  http.StatusBadRequest,
@@ -51,12 +50,12 @@ func (c *customerController) FindAll(ctx *gin.Context) {
 		return
 	}
 
-	var res []dto.CustomerResponse
-	for _, each := range *customers {
-		res = append(res, dto.CustomerResponse{
-			Id:    each.Id,
-			Name:  each.Name,
-			Email: each.Email,
+	var res []dto.OrderResponse
+	for _, each := range *orders {
+		res = append(res, dto.OrderResponse{
+			Id:        each.Id,
+			ProductId: each.ProductId,
+			Qty:       each.Qty,
 		})
 	}
 
@@ -67,14 +66,14 @@ func (c *customerController) FindAll(ctx *gin.Context) {
 	})
 }
 
-func (c *customerController) GetDetail(ctx *gin.Context) {
+func (c *orderController) GetDetail(ctx *gin.Context) {
 	id, _ := strconv.Atoi(ctx.Param("id"))
-	customer, err := c.Repository.GetDetail(id)
+	order, err := c.Repository.GetDetail(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, helpers.DefaultResponse{
 				Status:  http.StatusNotFound,
-				Message: "customer does not exist",
+				Message: "order does not exist",
 			})
 			return
 		}
@@ -87,7 +86,7 @@ func (c *customerController) GetDetail(ctx *gin.Context) {
 		return
 	}
 
-	res := dto.CustomerDetailResponse(*customer)
+	res := dto.OrderDetailResponse(*order)
 
 	ctx.JSON(http.StatusOK, helpers.Response{
 		Status:  http.StatusOK,
@@ -96,8 +95,8 @@ func (c *customerController) GetDetail(ctx *gin.Context) {
 	})
 }
 
-func (c *customerController) Insert(ctx *gin.Context) {
-	var req dto.CustomerInput
+func (c *orderController) Insert(ctx *gin.Context) {
+	var req dto.OrderInput
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse{
 			Status:  http.StatusBadRequest,
@@ -118,17 +117,13 @@ func (c *customerController) Insert(ctx *gin.Context) {
 		}
 	}
 
-	customer := models.Customer{
-		UserId:      req.UserId,
-		Name:        req.Name,
-		Email:       strings.ToLower(req.Email),
-		Gender:      req.Gender,
-		DateOfBirth: req.DateOfBirth,
-		Mobile:      req.Mobile,
-		Address:     req.Address,
+	order := models.Order{
+		CustomerId: req.CustomerId,
+		ProductId:  req.ProductId,
+		Qty:        req.Qty,
 	}
 
-	if err := c.Repository.Insert(&customer); err != nil {
+	if err := c.Repository.Insert(&order); err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse{
 			Status:  http.StatusBadRequest,
 			Message: "something went wrong. please try again",
@@ -137,17 +132,17 @@ func (c *customerController) Insert(ctx *gin.Context) {
 		return
 	}
 
-	res := dto.CustomerDetailResponse(customer)
+	res := dto.OrderDetailResponse(order)
 
 	ctx.JSON(http.StatusCreated, helpers.Response{
 		Status:  http.StatusCreated,
-		Message: "customer has been created",
+		Message: "order has been created",
 		Data:    res,
 	})
 }
 
-func (c *customerController) Update(ctx *gin.Context) {
-	var req dto.CustomerInput
+func (c *orderController) Update(ctx *gin.Context) {
+	var req dto.OrderInput
 	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse{
 			Status:  http.StatusBadRequest,
@@ -180,11 +175,11 @@ func (c *customerController) Update(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, helpers.DefaultResponse{
 		Status:  http.StatusOK,
-		Message: "customer detail have been updated",
+		Message: "order detail have been updated",
 	})
 }
 
-func (c *customerController) Delete(ctx *gin.Context) {
+func (c *orderController) Delete(ctx *gin.Context) {
 	id, _ := strconv.Atoi(ctx.Param("id"))
 	if err := c.Repository.Delete(id); err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse{
@@ -197,13 +192,13 @@ func (c *customerController) Delete(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, helpers.DefaultResponse{
 		Status:  http.StatusOK,
-		Message: "customer has been deleted",
+		Message: "order has been deleted",
 	})
 }
 
-func (c *customerController) Search(ctx *gin.Context) {
-	keyword := ctx.Query("keyword")
-	customers, err := c.Repository.Search(keyword)
+func (c *orderController) Search(ctx *gin.Context) {
+	keyword, _ := strconv.Atoi(ctx.Query("keyword"))
+	orders, err := c.Repository.Search(keyword)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse{
 			Status:  http.StatusBadRequest,
@@ -213,12 +208,12 @@ func (c *customerController) Search(ctx *gin.Context) {
 		return
 	}
 
-	var res []dto.CustomerResponse
-	for _, each := range *customers {
-		res = append(res, dto.CustomerResponse{
-			Id:    each.Id,
-			Name:  each.Name,
-			Email: each.Email,
+	var res []dto.OrderResponse
+	for _, each := range *orders {
+		res = append(res, dto.OrderResponse{
+			Id:        each.Id,
+			ProductId: each.ProductId,
+			Qty:       each.Qty,
 		})
 	}
 

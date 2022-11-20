@@ -13,6 +13,12 @@ type CustomerInput struct {
 }
 
 type CustomerResponse struct {
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type CustomerDetailResponse struct {
 	Id          int       `json:"id"`
 	UserId      int       `json:"user_id"`
 	Name        string    `json:"name"`

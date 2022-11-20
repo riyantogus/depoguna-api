@@ -3,13 +3,14 @@ package repositories
 import (
 	"depoguna-api/models"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type CustomerRepository interface {
-	FindAll(offset, pageSize int) (*[]models.Customer, error)
+	FindAll(paginate func(db *gorm.DB) *gorm.DB) (*[]models.Customer, error)
 	GetDetail(id int) (*models.Customer, error)
 	Insert(customer *models.Customer) error
 	Update(req interface{}, id int) error
@@ -27,15 +28,10 @@ func NewCustomerRepository(db *gorm.DB) CustomerRepository {
 	}
 }
 
-func paginate(offset, pageSize int) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Offset(offset).Limit(pageSize)
-	}
-}
-
-func (r *customerRepository) FindAll(offset, pageSize int) (*[]models.Customer, error) {
+func (r *customerRepository) FindAll(paginate func(db *gorm.DB) *gorm.DB) (*[]models.Customer, error) {
 	var customers []models.Customer
-	if err := r.DB.Scopes(paginate(offset, pageSize)).Find(&customers).Error; err != nil {
+
+	if err := r.DB.Scopes(paginate).Find(&customers).Error; err != nil {
 		return nil, err
 	}
 	return &customers, nil
@@ -58,6 +54,7 @@ func (r *customerRepository) Update(req interface{}, id int) error {
 	if err := r.DB.Table("customers").Clauses(clause.OnConflict{DoNothing: true}).Model(customer).Where("id = ?", id).Updates(req); err.Error != nil {
 		return err.Error
 	}
+	r.DB.Model(&customer).Where("id = ?", id).Update("UpdatedAt", time.Now())
 	return nil
 }
 
